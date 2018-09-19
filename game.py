@@ -19,6 +19,7 @@ class game:
     self.matrix = np.full((self.n, self.n), np.inf, dtype=float)
     self.matrix_no_obs = np.full((self.n2, self.n2), np.inf, dtype=float)
     self.is_obs = np.full(self.n, False)
+    self.mapn = np.full(self.n, -1)
     for i in range(self.n):
       self.matrix[i,i] = 0
     for i in range(self.xmaxnorm+1):
@@ -69,10 +70,49 @@ class game:
           dist = self.matrix_no_obs[i,k]+self.matrix_no_obs[k,j]
           if dist < self.matrix_no_obs[i,j]:
             self.matrix_no_obs[i,j] = dist
+  
+  def init_mapn(self):
+    index = 0
+    for i in range(self.n):
+      if not self.is_obs[i]:
+        self.mapn[i] = index
+        index = index+1
+      pass
+    pass
+
+  def from_xy_to_n2(self, arr):
+    n = self.from_xy_to_n(arr)
+    return self.mapn[n]
+  
+  def evaluate(self, pacman, cookies, pills, phantoms, mode):
+    pos = self.from_xy_to_n2(pacman)
+    evalu = 0.0
+    for ck in cookies:
+      posck = self.from_xy_to_n2([ck.x, ck.y])
+      dist = self.matrix_no_obs[pos, posck]
+      evalu = evalu + 5/(dist+1.0)
+    nearest_ph = np.inf
+    for i in range(len(phantoms)):
+      posph = self.from_xy_to_n2([phantoms[i].x, phantoms[i].y])
+      dist = self.matrix_no_obs[pos, posph]
+      if mode[i]:
+        evalu = evalu - 15/(dist)
+        if dist < nearest_ph: nearest_ph = dist
+      else:
+        evalu = evalu + 20/(dist+1.0)
+    for p in pills:
+      posp = self.from_xy_to_n2([p.x, p.y])
+      dist = self.matrix_no_obs[pos, posp]
+      evalu = evalu + 2/(dist+1.0) + 8/nearest_ph
+    print pos
+    return eval
 
 init = time.time()
-a = game(0,0,3,3,0)
+a = game(0,0,10,10,2)
+a.add_obs([1,1])
+a.add_obs([1,2])
 a.init_matrix()
+a.init_mapn()
 a.floyd_warshall()
 print a.matrix_no_obs
 print a.matrix
