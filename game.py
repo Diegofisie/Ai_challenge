@@ -85,7 +85,7 @@ class game:
     return self.mapn[n]
   
   def evaluate(self, pacman, cookies, pills, phantoms, mode):
-    pos = self.from_xy_to_n2(pacman)
+    pos = self.from_xy_to_n2([pacman.x, pacman.y])
     evalu = 0.0
     for ck in cookies:
       posck = self.from_xy_to_n2([ck.x, ck.y])
