@@ -31,7 +31,7 @@ def ghostsPosCallback(msg):
     global ghosts
     global ghostsStates
     ghosts = msg.ghostsPos
-    #ghostsStates = msg.ghostsStates
+    ghostsStates = msg.mode
 
 def cookiesPosCallback(msg):
     rospy.loginfo('# Cookies: {} '.format(msg.nCookies)) 
@@ -166,7 +166,7 @@ def pacman_controller_py_sol():
         rospy.loginfo("# Obs: {}".format(mapa.nObs))
         rospy.loginfo("minX : {}  maxX : {}".format(mapa.minX, mapa.maxX))
         rospy.loginfo("minY : {}  maxY : {}".format(mapa.minY, mapa.maxY))
-        
+        g = game(mapa.minX, mapa.minY, mapa.maxX, mapa.maxY, mapa.nObs)
         
         rate = rospy.Rate(10) # 10hz
         msg = actions()
