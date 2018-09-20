@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import random
 import rospy
+import numpy as np
 from pacman.msg import actions
 from pacman.msg import pacmanPos
 from pacman.msg import ghostsPos
@@ -18,42 +19,43 @@ cookies = []
 pills = []
 
 def pacmanPosCallback(msg):
-    rospy.loginfo('# Pacmans: {} posX: {} PosY: {}'.format(msg.nPacman, msg.pacmanPos.x, msg.pacmanPos.y) )
+    #rospy.loginfo('# Pacmans: {} posX: {} PosY: {}'.format(msg.nPacman, msg.pacmanPos.x, msg.pacmanPos.y) )
     global posx
     global posy
     posx = msg.pacmanPos.x
     posy = msg.pacmanPos.y
 
 def ghostsPosCallback(msg):
-    rospy.loginfo('# Ghosts: {} '.format(msg.nGhosts)) 
-    for i in range(msg.nGhosts):
-       rospy.loginfo('Pos Ghosts {}: PosX {} PosY {}'.format(i, msg.ghostsPos[i].x, msg.ghostsPos[i].y))
+    #rospy.loginfo('# Ghosts: {} '.format(msg.nGhosts)) 
+    #for i in range(msg.nGhosts):
+       #rospy.loginfo('Pos Ghosts {}: PosX {} PosY {}'.format(i, msg.ghostsPos[i].x, msg.ghostsPos[i].y))
     global ghosts
     global mode
     ghosts = msg.ghostsPos
     mode = msg.mode
 
 def cookiesPosCallback(msg):
-    rospy.loginfo('# Cookies: {} '.format(msg.nCookies)) 
-    for i in range(msg.nCookies):
-        rospy.loginfo('Pos Cookies {}: PosX {} PosY {}'.format(i, msg.cookiesPos[i].x, msg.cookiesPos[i].y))
+    #rospy.loginfo('# Cookies: {} '.format(msg.nCookies)) 
+    #for i in range(msg.nCookies):
+        #rospy.loginfo('Pos Cookies {}: PosX {} PosY {}'.format(i, msg.cookiesPos[i].x, msg.cookiesPos[i].y))
     global cookies
     cookies = msg.cookiesPos
 
 def bonusPosCallback(msg):
-    rospy.loginfo('# bonus: {} '.format(msg.nBonus)) 
-    for i in range(msg.nBonus):
-        rospy.loginfo('Pos Bonus {}: PosX {} PosY {}'.format(i, msg.bonusPos[i].x, msg.bonusPos[i].y))
+    #rospy.loginfo('# bonus: {} '.format(msg.nBonus)) 
+    #for i in range(msg.nBonus):
+        #rospy.loginfo('Pos Bonus {}: PosX {} PosY {}'.format(i, msg.bonusPos[i].x, msg.bonusPos[i].y))
     global pills
     pills = msg.bonusPos
 
 def gameStateCallback(msg):
-    rospy.loginfo('Game State: {} '.format(msg.state)) 
+    #rospy.loginfo('Game State: {} '.format(msg.state)) 
+    pass
 
 def performanceCallback(msg):
-    rospy.loginfo('Lives: {} Score: {} Time: {} PerformEval: {}'.format(msg.lives, msg.score, msg.gtime, msg.performEval) )
-
-class game:
+    #rospy.loginfo('Lives: {} Score: {} Time: {} PerformEval: {}'.format(msg.lives, msg.score, msg.gtime, msg.performEval) )
+    pass
+class game2:
     def __init__(self, xmin, ymin, xmax, ymax, nobs):
         self.xmin = xmin
         self.ymin = ymin
@@ -79,6 +81,8 @@ class game:
         return int(arr[0])*(self.ymaxnorm+1) + int(arr[1])
     
     def add_obs(self, obs):
+        obs[0] = obs[0]-self.xmin
+        obs[1] = obs[1]-self.ymin
         n = self.from_xy_to_n(obs)
         self.is_obs[n] = True
     
@@ -95,15 +99,15 @@ class game:
             indexi = indexi+1
 
     def neighbours(self, a):
-        x = a[0]-self.xmin
-        y = a[1]-self.ymin
+        x = a[0]
+        y = a[1]
         neighs = np.zeros((0,2), dtype=float)
         movsx = np.array([-1,1,0,0])
         movsy = np.array([0,0,-1,1])
         for i in range(4):
             x1 = x+movsx[i]
             y1 = y+movsy[i]
-            if x1 < 0 or x1 > self.xmaxnorm or y1 < 0 or y1 > self.ymaxnorm:
+            if x1 < 0 or x1 > self.xmaxnorm or y1 < 0 or y1 > self.ymaxnorm or self.is_obs[self.from_xy_to_n([x1,y1])]:
                 continue
             neighs = np.append(neighs, np.array([[x1, y1]]), axis=0)
         return neighs
@@ -128,30 +132,29 @@ class game:
         return self.mapn[n]
     
     def evaluate(self, pacman, cookies, pills, phantoms, mode):
-        pos = self.from_xy_to_n2([pacman[0], pacman[1])
+        pos = self.from_xy_to_n2([pacman[0], pacman[1]])
         evalu = 0.0
         for ck in cookies:
-            posck = self.from_xy_to_n2([ck.x, ck.y])
+            posck = self.from_xy_to_n2([ck.x-self.xmin, ck.y-self.ymin])
             dist = self.matrix_no_obs[pos, posck]
             evalu = evalu + 5/(dist+1.0)
         nearest_ph = np.inf
         for i in range(len(phantoms)):
-            posph = self.from_xy_to_n2([phantoms[i].x, phantoms[i].y])
+            posph = self.from_xy_to_n2([phantoms[i].x-self.xmin, phantoms[i].y-self.ymin])
             dist = self.matrix_no_obs[pos, posph]
-            if mode[i]:
+            if not mode[i]:
                 evalu = evalu - 15/(dist)
                 if dist < nearest_ph: nearest_ph = dist
             else:
                 evalu = evalu + 20/(dist+1.0)
         for p in pills:
-            posp = self.from_xy_to_n2([p.x, p.y])
+            posp = self.from_xy_to_n2([p.x-self.xmin, p.y-self.ymin])
             dist = self.matrix_no_obs[pos, posp]
             evalu = evalu + 2/(dist+1.0) + 8/nearest_ph
-        print pos
-        return eval
+        return evalu
 
-def eval_mov(from, to):
-    return int((1+from[1]-to[1])/2) + int((1+from[0]-to[0])/2+2)*abs(from[0]-to[0])
+def eval_mov(fromD, to):
+    return int((1+fromD[1]-to[1])/2) + int((1+fromD[0]-to[0])/2+2)*abs(fromD[0]-to[0])
 
 def pacman_controller_py_sol():
     global posx
@@ -175,9 +178,10 @@ def pacman_controller_py_sol():
         rospy.loginfo("# Obs: {}".format(mapa.nObs))
         rospy.loginfo("minX : {}  maxX : {}".format(mapa.minX, mapa.maxX))
         rospy.loginfo("minY : {}  maxY : {}".format(mapa.minY, mapa.maxY))
-        g = game(mapa.minX, mapa.minY, mapa.maxX, mapa.maxY, mapa.nObs)
-        for o in mapa.Obs:
-            x, y = o
+        g = game2(mapa.minX, mapa.minY, mapa.maxX, mapa.maxY, mapa.nObs)
+        for o in mapa.obs:
+            x = o.x
+            y = o.y
             g.add_obs([x,y])
         g.init_matrix()
         g.init_mapn()
@@ -185,15 +189,16 @@ def pacman_controller_py_sol():
         rate = rospy.Rate(10) # 10hz
         msg = actions()
         while not rospy.is_shutdown():
-            neighs = g.neighbours([posx, posy])
+            neighs = g.neighbours([posx-g.xmin, posy-g.ymin])
             optimalindex = 0
             optimal = -np.inf
             for i in range(len(neighs)):
                 eval = g.evaluate(neighs[i], cookies, pills, ghosts, mode)
-                if eval < optimal:
+                rospy.loginfo('eval: {}'.format(eval))
+                if eval > optimal:
                     optimal = eval
                     optimalindex = i
-            msg.action = eval_mov([posx, posy], neighs[i]);
+            msg.action = eval_mov([posx-g.xmin, posy-g.ymin], neighs[optimalindex]);
             pub.publish(msg.action)
             rate.sleep()
         
@@ -205,3 +210,4 @@ if __name__ == '__main__':
         pacman_controller_py_sol()
     except rospy.ROSInterruptException:
         pass
+
