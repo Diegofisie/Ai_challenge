@@ -167,7 +167,12 @@ def pacman_controller_py_sol():
         rospy.loginfo("minX : {}  maxX : {}".format(mapa.minX, mapa.maxX))
         rospy.loginfo("minY : {}  maxY : {}".format(mapa.minY, mapa.maxY))
         g = game(mapa.minX, mapa.minY, mapa.maxX, mapa.maxY, mapa.nObs)
-        
+        for o in mapa.Obs:
+            x, y = o
+            g.add_obs([x,y])
+        g.init_matrix()
+        g.init_mapn()
+        g.floyd_warshall()
         rate = rospy.Rate(10) # 10hz
         msg = actions()
         while not rospy.is_shutdown():
