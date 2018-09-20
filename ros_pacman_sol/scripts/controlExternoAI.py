@@ -13,7 +13,7 @@ from pacman.srv import mapService
 posx = 0
 posy = 0
 ghosts = []
-ghostsStates = []
+mode = []
 cookies = []
 pills = []
 
@@ -29,9 +29,9 @@ def ghostsPosCallback(msg):
     for i in range(msg.nGhosts):
        rospy.loginfo('Pos Ghosts {}: PosX {} PosY {}'.format(i, msg.ghostsPos[i].x, msg.ghostsPos[i].y))
     global ghosts
-    global ghostsStates
+    global mode
     ghosts = msg.ghostsPos
-    ghostsStates = msg.mode
+    mode = msg.mode
 
 def cookiesPosCallback(msg):
     rospy.loginfo('# Cookies: {} '.format(msg.nCookies)) 
@@ -128,7 +128,7 @@ class game:
         return self.mapn[n]
     
     def evaluate(self, pacman, cookies, pills, phantoms, mode):
-        pos = self.from_xy_to_n2([pacman.x, pacman.y])
+        pos = self.from_xy_to_n2([pacman[0], pacman[1])
         evalu = 0.0
         for ck in cookies:
             posck = self.from_xy_to_n2([ck.x, ck.y])
@@ -150,7 +150,16 @@ class game:
         print pos
         return eval
 
+def eval_mov(from, to):
+    return int((1+from[1]-to[1])/2) + int((1+from[0]-to[0])/2+2)*abs(from[0]-to[0])
+
 def pacman_controller_py_sol():
+    global posx
+    global posy
+    global ghosts
+    global mode
+    global cookies
+    global pills
     rospy.init_node('pacman_controller_py_sol', anonymous=True)
     pub = rospy.Publisher('pacmanActions0', actions, queue_size=10)
     rospy.Subscriber('pacmanCoord0', pacmanPos, pacmanPosCallback)
@@ -176,7 +185,15 @@ def pacman_controller_py_sol():
         rate = rospy.Rate(10) # 10hz
         msg = actions()
         while not rospy.is_shutdown():
-            msg.action = random.choice([0,1,2,3]);
+            neighs = g.neighbours([posx, posy])
+            optimalindex = 0
+            optimal = -np.inf
+            for i in range(len(neighs)):
+                eval = g.evaluate(neighs[i], cookies, pills, ghosts, mode)
+                if eval < optimal:
+                    optimal = eval
+                    optimalindex = i
+            msg.action = eval_mov([posx, posy], neighs[i]);
             pub.publish(msg.action)
             rate.sleep()
         
